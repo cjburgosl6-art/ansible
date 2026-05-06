@@ -1,0 +1,23 @@
+- name: Bootstrap web servers
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        name:
+          - curl
+          - htop
+          - vim
+        state: present
+
+    - name: Create deploy user
+      user:
+        name: deploy
+        groups: sudo
+        append: yes
+
+    - name: Custom MOTD
+      copy:
+        dest: /etc/motd
+        content: "Managed by Ansible"

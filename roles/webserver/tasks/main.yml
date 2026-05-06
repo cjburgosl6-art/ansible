@@ -1,0 +1,44 @@
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Remove default nginx site if present
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: reload nginx
+
+- name: Find legacy nginx conf.d files
+  find:
+    paths: /etc/nginx/conf.d
+    patterns: "*.conf"
+  register: legacy_confd
+
+- name: Remove legacy nginx conf.d files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ legacy_confd.files }}"
+  when: legacy_confd.matched > 0
+  notify: reload nginx
+
+- name: Deploy nginx vhost
+  template:
+    src: vhost.conf.j2
+    dest: /etc/nginx/sites-available/web.conf
+  notify: reload nginx
+
+- name: Enable nginx vhost
+  file:
+    src: /etc/nginx/sites-available/web.conf
+    dest: /etc/nginx/sites-enabled/web.conf
+    state: link
+  notify: reload nginx
+
+- name: Deploy homepage
+  template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+  notify: reload nginx
