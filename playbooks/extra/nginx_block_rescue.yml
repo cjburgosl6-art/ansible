@@ -1,0 +1,21 @@
+- hosts: web
+  become: true
+
+  tasks:
+    - name: Reload nginx safely using block/rescue
+      block:
+        - name: Try to reload nginx
+          service:
+            name: nginx
+            state: reloaded
+
+      rescue:
+        - name: Restart nginx if reload fails
+          service:
+            name: nginx
+            state: restarted
+
+      always:
+        - name: Log nginx operation
+          debug:
+            msg: "Nginx reload attempt finished"

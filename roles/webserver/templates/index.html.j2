@@ -1,4 +1,4 @@
-<h1>{{ ansible_hostname }}</h1>
-<p>IP: {{ ansible_default_ipv4.address }}</p>
-<p>OS: {{ ansible_distribution }}</p>
-<p>RAM: {{ ansible_memtotal_mb }} MB</p>
+<h1>{{ ansible_facts.hostname }}</h1>
+<p>IP: {{ ansible_facts.default_ipv4.address }}</p>
+<p>OS: {{ ansible_facts.distribution }}</p>
+<p>RAM: {{ ansible_facts.memtotal_mb }} MB</p>

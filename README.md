@@ -1,187 +1,222 @@
-Ansible TP
-📌 Project overview
-This project demonstrates the use of Ansible to automate the configuration of two Debian 12 servers from a single control machine.
-The goal is to apply infrastructure-as-code principles such as idempotence, templating, roles, and secrets management.
+📘 Ansible TP – Web & Database Automation
+📌 Project Overview
+This project demonstrates the use of Ansible to automate the configuration of a small
+multi‑tier infrastructure using Infrastructure as Code principles.
+
+The main objectives are:
+Idempotent configuration management
+Use of inventories, playbooks, roles, templates, handlers
+Secure secret handling with Ansible Vault
+Clear separation of responsibilities (web / database)
+
 
 🖥️ Infrastructure
 
-Control node: macOS (Ansible ≥ 2.15)
-Managed nodes:
+Control Node
+macOS / Linux / WSL
+Ansible ≥ 2.15
 
-web1 — Debian 12 (HTTP 80 / HTTPS 443)
-web2 — Debian 12 (HTTP 8080 / HTTPS 444)
+Managed Nodes
+web1 – Debian 12 (HTTP 80 / HTTPS 443)
+web2 – Debian 12 (HTTP 8080 / HTTPS 444)
+db1 – CentOS (PostgreSQL)
+
+Network & Access
+Private network between all hosts
+SSH key‑based authentication
+User with passwordless sudo on all managed nodes
 
 
-Virtualization: Proxmox
-Network: private network
-Access:
-
-SSH key-based authentication
-User with passwordless sudo on both servers
-
-📁 Project structure
-
+📁 Project Structure
 ansible-tp/
-├── ansible.cfg
-├── inventory/
-│   └── hosts.ini
-├── playbooks/
-│   ├── bootstrap.yml
-│   └── site.yml
-├── roles/
-│   └── webserver/
-│       ├── tasks/
-│       │   └── main.yml
-│       ├── handlers/
-│       │   └── main.yml
-│       ├── templates/
-│       │   ├── index.html.j2
-│       │   └── vhost.conf.j2
-│       └── defaults/
-│           └── main.yml
-├── vault/
-│   └── secrets.yml
-└── README.md
+├─ansible.cfg
+├─inventory/
+│   └─hosts.ini
+├─playbooks/
+│   ├─bootstrap.yml
+│   ├─site.yml
+│   └─extras/
+│       └─nginx_block_rescue.yml
+├─roles/
+│   ├─webserver/
+│   │   ├─tasks/
+│   │   │   └─main.yml
+│   │   ├─handlers/
+│   │   │   └─main.yml
+│   │   ├─templates/
+│   │   │   ├─index.html.j2
+│   │   │   └─vhost.conf.j2
+│   │   └─defaults/
+│   │       └ main.yml
+│   └─db/
+│       └─tasks/
+│           └─main.yml
+├─vault/
+│   └─secrets.yml
+└─README.md
 
-🟦 Step 1 — Inventory and connectivity
-The inventory defines the two managed servers in a group called web.
 
-inventory/hosts.ini
-[web]
-web1 ansible_host=192.168.1.204 http_port=80   https_port=443
-web2 ansible_host=192.168.1.205 http_port=8080 https_port=444
+🟦 Step 1 – Inventory and Connectivity
 
-[all:vars]
-ansible_user=cristian
-ansible_become=true
-
+Inventory
+INI[web]web1 ansible_host=192.168.1.204 http_port=80   https_port=443web2 ansible_host=192.168.1.205 http_port=8080 https_port=444[db]db1 ansible_host=192.168.1.206[all:vars]ansible_user=cristianansible_become=trueansible_python_interpreter=/usr/bin/python3Mostrar más líneas
 Connectivity is verified using:
-ansible web -m ping
+Shellansible web -m pingansible db  -m pingMostrar más líneas
+✅ All hosts respond successfully.
 
-✅ Both hosts respond successfully.
 
-🟦 Step 2 — Bootstrap playbook and idempotence
-The bootstrap playbook prepares the servers:
+🟦 Step 2 – Bootstrap Playbook
 
-Updates APT cache
-Installs base packages (curl, htop, vim)
-Creates a deploy user with sudo privileges
-Deploys a custom /etc/motd
+The bootstrap playbook prepares all servers with common requirements:
+Update APT cache (idempotent)
+Install base packages (curl, htop, vim) using a loop
+Create a deploy user with sudo privileges
+Deploy a custom /etc/motd
 
-playbooks/bootstrap.yml
-The playbook is executed twice:
+The playbook is executed twice to validate idempotence:
 ansible-playbook playbooks/bootstrap.yml
-ansible-playbook playbooks/bootstrap.ymlMostrar más líneas
+ansible-playbook playbooks/bootstrap.yml
 
-On the second run, all tasks return ok.
+✅ Idempotence
+Idempotence means that running the same playbook multiple times does not change the system if it is already in the desired state.
+This guarantees safe, predictable automation.
 
-✅ What is idempotence?
 
-Idempotence means that a playbook can be executed multiple times without changing the system if it is already in the desired state.
-This is crucial to ensure reliability, safety, and predictability in automation.
+🟦 Step 3 – Web Server Configuration (Nginx)
 
-🟦 Step 3 — Variables, templates and handlers (Nginx)
-Nginx is deployed using:
+The webserver role handles all web‑related configuration:
+Installation of Nginx
+Removal of default configuration
+Deployment of a custom virtual host
+Host‑specific ports via variables
+Dynamic HTML page generated with Jinja2 templates
+Use of handlers to reload Nginx only when required
 
-Host-specific variables for ports
-Jinja2 templates for configuration and HTML
-A handler that reloads Nginx only when needed
-
-Template: dynamic homepage
+Dynamic Homepage
 Each server displays its own system information:
-
 Hostname
 IP address
 Operating system
-RAM
+Total RAM
 
-Handler
-A handler reloads Nginx only if a configuration file changes.
-Difference between a task and a handler
+All values are retrieved using ansible_facts.
 
+
+🟦 Step 4 – Handlers
+
+Handlers are used to manage non‑idempotent actions safely.
+Example:
+notify: reload nginx
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded
+
+Difference Between a Task and a Handler
 Task: executed every time the playbook runs
-Handler: executed only when notified by a changed task
+Handler: executed only if notified by a changed task
+
+This mechanism preserves idempotence while allowing service reloads when needed.
 
 
-🟦 Step 4 — Refactoring into a role
-The Nginx logic is refactored into a role named webserver.
-Advantages of using roles:
+🟦 Step 5 – Database Role (Extra)
 
-Better code organization
-Reusability
-Easier maintenance
-Clear separation of concerns
+A separate role db is used to manage the database host.
 
-The main playbook becomes minimal:
-playbooks/site.yml
-- hosts: web
-  roles:
-    - webserver
+Role Responsibility
+Install PostgreSQL on db1
+Demonstrate multi‑tier infrastructure management
 
-🟦 Step 5 — Secrets management with Ansible Vault
-Sensitive data is stored securely using Ansible Vault.
+Example task:
+- name: Install PostgreSQL
+  dnf:
+    name: postgresql-server
+    state: present
 
-Encrypted file
+This shows clear separation between web and database responsibilities.
+
+
+🟦 Step 6 – Error Handling with block / rescue / always (Extra)
+
+To demonstrate error handling, a separate playbook is used:
+Textplaybooks/extras/nginx_block_rescue.yml
+
+This playbook wraps a risky operation (service reload) inside a:
+block – normal execution
+rescue – fallback action
+always – cleanup / logging
+
+This example is intentionally isolated so it does not affect the idempotent main workflow.
+
+
+🟦 Step 7 – Secrets Management with Ansible Vault
+
+Sensitive variables are stored securely using Ansible Vault.
 ansible-vault create vault/secrets.yml
 
 Content:
 db_password: fakepassword
-api_token: faketokenMostrar
+api_token: faketoken
+
+Secrets are deployed to /etc/myapp.env with strict permissions:
+Mode 0600
+no_log: true to avoid leaking sensitive data
 
 🔐 For this project, the Vault password used during execution was vault123.
-This password is never stored in the repository.
+The password itself is never stored in the repository.
 
-Secure deployment
-Secrets are written to /etc/myapp.env with strict permissions:
-
-Mode 0600
-no_log: true to prevent leaks in console output
-
-Why is no_log important?
-Without no_log, sensitive information could appear in:
-
-Ansible console output
+Why no_log Is Important
+Without no_log, secrets could appear in:
+Console output
 Logs
 CI/CD pipelines
 
-Using no_log prevents accidental exposure of secrets.
+Using no_log prevents accidental exposure.
 
-📦 Version control
+📦 Version Control
 The project is versioned using Git.
-Included in Git:
 
+Included
 Playbooks
 Roles
 Templates
+Inventory
 README
 
-Excluded from Git:
-
+Excluded
 Private SSH keys
 Vault passwords
-Sensitive runtime data
+Decrypted secrets
+
+Encrypted Vault files are safe to commit.
 
 
-❓ Final questions
-Difference between Ansible and Puppet/Chef
+❓ Final Questions
+
+Difference between Ansible and Puppet / Chef
 Ansible is agentless and uses SSH, while Puppet and Chef require agents installed on managed nodes.
 
 Why is Ansible agentless?
-Because it relies on SSH and existing system tools, reducing complexity and attack surface.
+Because it relies on existing system tools (SSH, Python), reducing complexity and attack surface.
 
 When to use a playbook vs a role?
 Playbook: orchestration
-Role: reusable and modular logic
+Role: reusable, modular logic
 
-How would you manage more than 1000 servers?
-By using inventories, dynamic inventory sources, parallelism, and delegation tools.
+How would you version this project?
+Using Git, excluding sensitive data and managing secrets with Ansible Vault.
+
+Limits of Ansible at scale
+For very large infrastructures (>1000 hosts), performance and orchestration complexity may require additional tooling or tuning.
+
 
 ✅ Conclusion
-This project demonstrates:
 
-Infrastructure as Code
+This project demonstrates:
 Idempotent automation
-Modular design with roles
-Secure secret handling
+Clean role‑based architecture
+Safe handling of secrets
+Separation of concerns
+Realistic infrastructure management
 
 All requirements of the assignment are fulfilled.

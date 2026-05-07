@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/db
+- name: Install PostgreSQL
+  dnf:
+    name: postgresql-server
+    state: present

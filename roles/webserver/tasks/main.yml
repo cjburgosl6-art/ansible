@@ -2,19 +2,23 @@
   apt:
     name: nginx
     state: present
-    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_facts["distribution"] == "Debian"
+  tags: web
 
 - name: Remove default nginx site if present
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
   notify: reload nginx
+  tags: web
 
 - name: Find legacy nginx conf.d files
   find:
     paths: /etc/nginx/conf.d
     patterns: "*.conf"
   register: legacy_confd
+  tags: web
 
 - name: Remove legacy nginx conf.d files
   file:
@@ -23,12 +27,14 @@
   loop: "{{ legacy_confd.files }}"
   when: legacy_confd.matched > 0
   notify: reload nginx
+  tags: web
 
 - name: Deploy nginx vhost
   template:
     src: vhost.conf.j2
     dest: /etc/nginx/sites-available/web.conf
   notify: reload nginx
+  tags: web
 
 - name: Enable nginx vhost
   file:
@@ -36,9 +42,11 @@
     dest: /etc/nginx/sites-enabled/web.conf
     state: link
   notify: reload nginx
+  tags: web
 
 - name: Deploy homepage
   template:
     src: index.html.j2
     dest: /var/www/html/index.html
   notify: reload nginx
+  tags: web
