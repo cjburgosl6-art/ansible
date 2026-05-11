@@ -49,7 +49,7 @@ ansible-tp/
 │   │   └─defaults/
 │   │       └ main.yml
 │   └─db/
-│       └─tasks/
+│      └─tasks/
 │           └─main.yml
 ├─vault/
 │   └─secrets.yml
@@ -59,9 +59,21 @@ ansible-tp/
 🟦 Step 1 – Inventory and Connectivity
 
 Inventory
-INI[web]web1 ansible_host=192.168.1.204 http_port=80   https_port=443web2 ansible_host=192.168.1.205 http_port=8080 https_port=444[db]db1 ansible_host=192.168.1.206[all:vars]ansible_user=cristianansible_become=trueansible_python_interpreter=/usr/bin/python3Mostrar más líneas
+[web]
+web1 ansible_host=192.168.1.204 http_port=80   https_port=443
+web2 ansible_host=192.168.1.205 http_port=8080 https_port=444
+
+[db]
+db1 ansible_host=192.168.1.206
+
+[all:vars]ansible_user=cristian
+ansible_become=true
+ansible_python_interpreter=/usr/bin/python3
+
 Connectivity is verified using:
-Shellansible web -m pingansible db  -m pingMostrar más líneas
+Shellansible web -m ping
+ansible db  -m ping
+
 ✅ All hosts respond successfully.
 
 
@@ -106,13 +118,16 @@ All values are retrieved using ansible_facts.
 
 Handlers are used to manage non‑idempotent actions safely.
 Example:
+
 notify: reload nginx
+
 - name: reload nginx
   service:
     name: nginx
     state: reloaded
 
 Difference Between a Task and a Handler
+
 Task: executed every time the playbook runs
 Handler: executed only if notified by a changed task
 
@@ -124,10 +139,11 @@ This mechanism preserves idempotence while allowing service reloads when needed.
 A separate role db is used to manage the database host.
 
 Role Responsibility
-Install PostgreSQL on db1
+Install PostgreSQL on db
 Demonstrate multi‑tier infrastructure management
 
 Example task:
+
 - name: Install PostgreSQL
   dnf:
     name: postgresql-server
@@ -139,9 +155,11 @@ This shows clear separation between web and database responsibilities.
 🟦 Step 6 – Error Handling with block / rescue / always (Extra)
 
 To demonstrate error handling, a separate playbook is used:
+
 Textplaybooks/extras/nginx_block_rescue.yml
 
 This playbook wraps a risky operation (service reload) inside a:
+
 block – normal execution
 rescue – fallback action
 always – cleanup / logging
@@ -152,13 +170,16 @@ This example is intentionally isolated so it does not affect the idempotent main
 🟦 Step 7 – Secrets Management with Ansible Vault
 
 Sensitive variables are stored securely using Ansible Vault.
+
 ansible-vault create vault/secrets.yml
 
 Content:
+
 db_password: fakepassword
 api_token: faketoken
 
 Secrets are deployed to /etc/myapp.env with strict permissions:
+
 Mode 0600
 no_log: true to avoid leaking sensitive data
 
@@ -167,6 +188,7 @@ The password itself is never stored in the repository.
 
 Why no_log Is Important
 Without no_log, secrets could appear in:
+
 Console output
 Logs
 CI/CD pipelines
@@ -176,14 +198,16 @@ Using no_log prevents accidental exposure.
 📦 Version Control
 The project is versioned using Git.
 
-Included
+Included:
+
 Playbooks
 Roles
 Templates
 Inventory
 README
 
-Excluded
+Excluded:
+
 Private SSH keys
 Vault passwords
 Decrypted secrets
@@ -213,6 +237,7 @@ For very large infrastructures (>1000 hosts), performance and orchestration comp
 ✅ Conclusion
 
 This project demonstrates:
+
 Idempotent automation
 Clean role‑based architecture
 Safe handling of secrets
