@@ -59,6 +59,7 @@ ansible-tp/
 🟦 Step 1 – Inventory and Connectivity
 
 Inventory
+
 [web]
 web1 ansible_host=192.168.1.204 http_port=80   https_port=443
 web2 ansible_host=192.168.1.205 http_port=8080 https_port=444
@@ -71,7 +72,7 @@ ansible_become=true
 ansible_python_interpreter=/usr/bin/python3
 
 Connectivity is verified using:
-Shellansible web -m ping
+ansible web -m ping
 ansible db  -m ping
 
 ✅ All hosts respond successfully.
