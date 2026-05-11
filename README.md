@@ -67,7 +67,8 @@ web2 ansible_host=192.168.1.205 http_port=8080 https_port=444
 [db]
 db1 ansible_host=192.168.1.206
 
-[all:vars]ansible_user=cristian
+[all:vars]
+ansible_user=cristian
 ansible_become=true
 ansible_python_interpreter=/usr/bin/python3
 
